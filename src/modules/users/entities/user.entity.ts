@@ -38,8 +38,8 @@ export class UserEntity extends CommonEntity {
   /**
    * [description]
    */
-  @ApiProperty({ maxLength: 320, nullable: true })
-  @Prop({ type: String, maxlength: 320, default: null })
+  @ApiProperty({ maxLength: 128, nullable: true })
+  @Prop({ type: String, maxlength: 128, default: null })
   public readonly name?: string;
 }
 
