@@ -11,6 +11,7 @@ import {
   Post,
   Get,
   Res,
+  Put,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 
@@ -98,7 +99,7 @@ export class AuthController {
    * [description]
    * @param data
    */
-  @Post('logout')
+  @Put('logout')
   @UseGuards(JwtRefreshGuard)
   @ApiCookieAuth('refreshToken')
   public async logOut(
@@ -115,7 +116,7 @@ export class AuthController {
    * [description]
    * @param user
    */
-  @Post('refresh-tokens')
+  @Put('refresh-tokens')
   @UseGuards(JwtRefreshGuard)
   @ApiCookieAuth('refreshToken')
   public async refreshTokens(

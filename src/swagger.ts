@@ -6,15 +6,11 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from './config';
 
 const TOKENS_DESCRIPTION = `
-##### 🔐 Authorization Tokens
+##### 🔐 Default Authorization Credentials
 
-Use the following *default* Bearer tokens depending on your role:
+- **admin@gmail.com** *Password1*
 
-- **Admin** *067f2f3e-b936-4029-93d6-b2f58ae4f489*: 📋 Copy \n>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjA2N2YyZjNlLWI5MzYtNDAyOS05M2Q2LWIyZjU4YWU0ZjQ4OSIsImlzRGV2Ijp0cnVlLCJpYXQiOjE3NTMxOTgwMDksImV4cCI6MTkxMDk4NjAwOX0.6rXjYtH9MuisI5gvhRcxTWucNRwsHXw3AC0wvXohuPU
-
-- **User** *648fb3f0-ed5f-4177-99ab-9cab46bacd87*: 📋 Copy \n>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0OGZiM2YwLWVkNWYtNDE3Ny05OWFiLTljYWI0NmJhY2Q4NyIsImlzRGV2Ijp0cnVlLCJpYXQiOjE3NTMxOTgwMDl9.Ok-TydDnVIwwxPwJuVBLt8K2P2QgTfuFO9P1g0axwgY
-
-Paste them into the 🔒 "Authorize" dialog above.
+- **client@gmail.com** *Password1*
 `;
 
 /**

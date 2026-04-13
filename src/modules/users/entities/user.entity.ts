@@ -30,8 +30,8 @@ export class UserEntity extends CommonEntity {
   /**
    * [description]
    */
-  @Exclude()
   @ApiHideProperty()
+  @Exclude({ toPlainOnly: true })
   @Prop({ type: String, maxlength: 161, select: false, required: true })
   public password: string;
 

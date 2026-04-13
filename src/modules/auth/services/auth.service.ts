@@ -107,7 +107,7 @@ export class AuthService {
    * @param password
    */
   public async login(data: CredentialsDto): Promise<ResponseCredentialsDto> {
-    const user = await this.validateUser({ email: data.email });
+    const user = await this.validateUser({ email: data.email }, { projection: '+password' });
 
     if (!(await this.validatePassword(data.password, user.password)))
       throw new BadRequestException(ErrorTypeEnum.AUTH_INCORRECT_CREDENTIALS);
@@ -131,7 +131,7 @@ export class AuthService {
     conditions: FilterQuery<UserEntity>,
     options?: FindOneBracketsOptions<UserEntity>,
   ): Promise<ReqUserDto> {
-    const initialOptions = { projection: '+password role email name' };
+    const initialOptions = { projection: 'role email name' };
     return this.usersService
       .selectOne(conditions, Object.assign(initialOptions, options))
       .catch((error) =>
