@@ -8,7 +8,11 @@ import { SocketsGateway } from 'src/modules/sockets/services';
 import { SymbolsService } from 'src/modules/symbols/services';
 import { SymbolEntity } from 'src/modules/symbols/entities';
 
-import { SymbolStream, StreamTask } from '../types/symbol-stream.type';
+import {
+  MarketTickerStream,
+  MarketTickerBatch,
+  MarketTickerEntry,
+} from '../types/symbol-stream.type';
 
 /**
  * Keeps Binance websocket streams in sync with stored symbols.
@@ -16,15 +20,11 @@ import { SymbolStream, StreamTask } from '../types/symbol-stream.type';
  * Responsibilities:
  * - Load existing symbols from storage on startup.
  * - Open and keep a Binance websocket streams connection alive.
- * - Subscribe and unsubscribe streams when symbols change.
+ * - Listen to one combined mini-ticker stream for all market updates.
  * - Persist price updates and forward them to client sockets.
  *
- * Binance stream limits are handled with a small token bucket:
- * - 5 stream operations per second.
- * - Reconnect/renewal is delegated to `@binance/spot`.
- *
+ * This provider deliberately uses a single `allMiniTicker` stream
  * @see https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams
- * @see https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#websocket-limits
  */
 @Injectable()
 export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
@@ -42,18 +42,16 @@ export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
     'single',
   );
   private readonly connectionPoolSize = this.configService.get<number>('BINANCE_WS_POOL_SIZE', 1);
-  private readonly messageLimit = this.configService.get<number>('BINANCE_WS_MESSAGE_LIMIT', 5);
 
   private readonly desiredSymbols = new Map<string, SymbolEntity>();
-  private readonly activeStreams = new Map<string, SymbolStream>();
-  private readonly queue: StreamTask[] = [];
 
   private client: Spot | null = null;
   private connection: SpotWebsocketStreams.WebsocketStreamsConnection | null = null;
-  private refillTimer: NodeJS.Timeout | null = null;
-  private availableTokens = this.messageLimit;
+  private marketTickerStream: MarketTickerStream | null = null;
+
   private isBootstrapping = false;
   private isShuttingDown = false;
+  private tickerProcessing: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly configService: ConfigService,
@@ -62,21 +60,20 @@ export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   public async onModuleInit(): Promise<void> {
-    await this.bootstrap();
+    void this.bootstrap().catch((error) => {
+      this.logger.error(`Binance bootstrap failed: ${this.formatError(error)}`);
+    });
   }
 
   public async onModuleDestroy(): Promise<void> {
     this.isShuttingDown = true;
-    if (this.refillTimer) clearInterval(this.refillTimer);
 
-    for (const stream of this.activeStreams.values()) {
-      try {
-        stream.unsubscribe();
-      } catch {
-        // Best effort shutdown
-      }
+    try {
+      this.marketTickerStream?.unsubscribe();
+    } catch {
+      // Best effort shutdown
     }
-    this.activeStreams.clear();
+    this.marketTickerStream = null;
 
     if (this.connection) {
       await this.connection.disconnect().catch(() => null);
@@ -85,7 +82,7 @@ export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Bootstraps the provider by loading current symbols, connecting to Binance,
-   * and subscribing to every active provider symbol
+   * and starting the shared market ticker stream
    */
   public async bootstrap(): Promise<void> {
     if (this.isBootstrapping) return;
@@ -94,12 +91,10 @@ export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.loadExistingSymbols();
       await this.connect();
-      this.startTokenRefill();
-      await this.enqueueMany(
-        Array.from(this.desiredSymbols.values()).map(
-          (symbol) => () => this.subscribeSymbolNow(symbol),
-        ),
-      );
+      await this.startMarketTickerStream();
+      this.logger.log(`Binance bootstrap loaded ${this.desiredSymbols.size} symbol(s)`);
+    } catch (error) {
+      this.logger.error(`Binance bootstrap failed: ${this.formatError(error)}`);
     } finally {
       this.isBootstrapping = false;
     }
@@ -145,21 +140,17 @@ export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
       sort: { createdAt: 1 },
     });
 
-    if (symbols.length > 1024)
-      throw new Error('Binance websocket streams limit exceeded: max 1024 streams per connection');
-
     for (const symbol of symbols) {
       this.desiredSymbols.set(symbol.providerSymbol, symbol);
     }
   }
 
   /**
-   * Registers a new symbol and subscribes to its Binance stream.
+   * Registers a new symbol in the local registry.
    * @param symbol
    */
   public async registerSymbol(symbol: SymbolEntity): Promise<void> {
     this.desiredSymbols.set(symbol.providerSymbol, symbol);
-    await this.enqueue(() => this.subscribeSymbolNow(symbol));
   }
 
   /**
@@ -173,144 +164,80 @@ export class BinanceProviderService implements OnModuleInit, OnModuleDestroy {
 
     this.desiredSymbols.delete(previousProviderSymbol);
     this.desiredSymbols.set(currentProviderSymbol, current);
-
-    if (previousProviderSymbol !== currentProviderSymbol) {
-      await this.enqueue(() => this.unsubscribeSymbolNow(previousProviderSymbol));
-      await this.enqueue(() => this.subscribeSymbolNow(current));
-    }
   }
 
   /**
-   * Removes a symbol from the registry and unsubscribes its Binance stream.
+   * Removes a symbol from the registry.
    * @param symbol
    */
   public async unregisterSymbol(symbol: SymbolEntity): Promise<void> {
     this.desiredSymbols.delete(symbol.providerSymbol);
-    await this.enqueue(() => this.unsubscribeSymbolNow(symbol.providerSymbol));
   }
 
   /**
-   * Subscribes to a Binance mini-ticker stream for one symbol.
-   * @param symbol
+   * Starts a single all-market mini-ticker stream and filters updates locally.
    */
-  private async subscribeSymbolNow(symbol: SymbolEntity): Promise<void> {
-    if (!this.connection || this.isShuttingDown) return;
-    if (this.activeStreams.has(symbol.providerSymbol)) return;
+  private async startMarketTickerStream(): Promise<void> {
+    if (!this.connection || this.isShuttingDown || this.marketTickerStream) return;
 
-    const stream = this.connection.miniTicker({ symbol: symbol.providerSymbol });
-    const onMessage = async (data: SpotWebsocketStreams.MiniTickerResponse) => {
-      await this.handleTicker(symbol.providerSymbol, data);
-    };
+    this.marketTickerStream = this.connection.allMiniTicker({});
+    this.marketTickerStream.on('message', (data: MarketTickerBatch) => {
+      void this.enqueueTickerBatch(data);
+    });
 
-    stream.on('message', onMessage);
-    this.activeStreams.set(symbol.providerSymbol, stream);
+    this.logger.log(
+      `Subscribed Binance all-mini-ticker stream for ${this.desiredSymbols.size} tracked symbol(s)`,
+    );
   }
 
   /**
-   * Stops listening to a Binance stream for one symbol.
-   * @param providerSymbol
+   * Queues a batch of ticker updates so DB writes stay serialized.
+   * @param data Raw all-mini-ticker payload from Binance
    */
-  private async unsubscribeSymbolNow(providerSymbol: string): Promise<void> {
-    const stream = this.activeStreams.get(providerSymbol);
-    if (!stream) return;
+  private enqueueTickerBatch(data: MarketTickerBatch): void {
+    this.tickerProcessing = this.tickerProcessing
+      .then(() => this.handleTickerBatch(data))
+      .catch((error) => {
+        this.logger.error(`Binance ticker batch failed: ${this.formatError(error)}`);
+      });
+  }
 
-    try {
-      stream.unsubscribe();
-    } finally {
-      this.activeStreams.delete(providerSymbol);
+  /**
+   * Applies a batch of ticker updates to the stored symbols and broadcasts them.
+   * @param data Raw all-mini-ticker payload from Binance
+   */
+  private async handleTickerBatch(data: MarketTickerBatch): Promise<void> {
+    if (!Array.isArray(data) || !data.length || this.isShuttingDown) return;
+
+    for (const entry of data) {
+      await this.handleTickerEntry(entry);
     }
   }
 
   /**
-   * Applies a ticker update to the stored symbol and broadcasts it to clients.
-   * @param providerSymbol
-   * @param data Raw mini-ticker payload from Binance
+   * Applies a single ticker entry if the symbol is tracked.
+   * @param entry Raw mini-ticker item from Binance
    */
-  private async handleTicker(
-    providerSymbol: string,
-    data: SpotWebsocketStreams.MiniTickerResponse,
-  ): Promise<void> {
-    const nextPrice = Number(data?.c);
-    if (!Number.isFinite(nextPrice)) return;
+  private async handleTickerEntry(entry: MarketTickerEntry): Promise<void> {
+    const providerSymbol = entry?.s;
+    const priceValue = Number(entry?.c);
+
+    if (!providerSymbol || !Number.isFinite(priceValue)) return;
 
     const current = this.desiredSymbols.get(providerSymbol);
-    if (!current || current.price === nextPrice) return;
+    if (!current || current.price === priceValue) return;
 
     const updated = await this.symbolsService.updateOne(
       { id: current.id },
-      { price: nextPrice, providerSymbol: current.providerSymbol },
+      { price: priceValue, providerSymbol: current.providerSymbol },
     );
 
     this.desiredSymbols.set(providerSymbol, updated);
     this.socketsGateway.emitSymbolPriceChanged({
       providerSymbol,
       name: updated.name,
-      price: nextPrice,
+      price: priceValue,
     });
-  }
-
-  /**
-   * Enqueues a stream task and enforces the 5 messages-per-second limit.
-   * @param task Async stream operation
-   */
-  private async enqueue(task: StreamTask): Promise<void> {
-    if (this.availableTokens > 0) {
-      this.availableTokens = this.availableTokens - 1;
-      await task();
-
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      this.queue.push(async () => {
-        try {
-          await task();
-        } catch (error) {
-          this.logger.error(`Binance stream task failed: ${this.formatError(error)}`);
-        } finally {
-          resolve();
-        }
-      });
-    });
-  }
-
-  /**
-   * Runs a batch of stream tasks sequentially.
-   *
-   * @param tasks List of async stream operations.
-   */
-  private async enqueueMany(tasks: StreamTask[]): Promise<void> {
-    for (const task of tasks) {
-      await this.enqueue(task);
-    }
-  }
-
-  /**
-   * Resets the available token budget once per second.
-   */
-  private startTokenRefill(): void {
-    if (this.refillTimer) return;
-
-    this.refillTimer = setInterval(() => {
-      this.availableTokens = this.messageLimit;
-      this.drainQueue();
-    }, 1000);
-  }
-
-  /**
-   * Drains the pending task queue while tokens are available.
-   */
-  private drainQueue(): void {
-    while (this.availableTokens > 0 && this.queue.length > 0) {
-      const task = this.queue.shift();
-      if (!task) return;
-
-      this.availableTokens -= 1;
-      // Fire-and-forget is intentional here
-      void task().catch((error) => {
-        this.logger.error(`Binance stream task failed: ${this.formatError(error)}`);
-      });
-    }
   }
 
   private formatError(error: unknown): string {

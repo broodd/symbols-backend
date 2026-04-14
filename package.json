@@ -33,9 +33,15 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "sh -c 'if test \"$NODE_ENV\" -ne \"production\" ; then husky install ; fi' ",
-    "cli": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/seeds/cli.ts",
+    "cli": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/cli.ts",
     "seed:admin": "npm run cli -- seed:admin",
-    "seed:admin:prod": "cross-env NODE_ENV=production node dist/database/seeds/cli.js seed:admin"
+    "seed:client": "npm run cli -- seed:client",
+    "seed:symbols": "npm run cli -- seed:symbols",
+    "seed:all": "npm run seed:admin && npm run seed:client && npm run seed:symbols",
+    "seed:admin:prod": "cross-env NODE_ENV=production node dist/database/cli.js seed:admin",
+    "seed:client:prod": "cross-env NODE_ENV=production node dist/database/cli.js seed:client",
+    "seed:symbols:prod": "cross-env NODE_ENV=production node dist/database/cli.js seed:symbols",
+    "seed:all:prod": "cross-env NODE_ENV=production sh -c 'node dist/database/cli.js seed:admin && node dist/database/cli.js seed:client && node dist/database/cli.js seed:symbols'"
   },
   "dependencies": {
     "@binance/spot": "^28.0.5",

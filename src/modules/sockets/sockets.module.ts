@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { forwardRef, Global, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 
 import { ConfigService } from 'src/config';
@@ -26,7 +26,7 @@ import { SocketsService } from './services/sockets.service';
       inject: [ConfigService],
     }),
     UsersModule,
-    SymbolsModule,
+    forwardRef(() => SymbolsModule),
   ],
   providers: [SocketsGateway, SocketsService],
   exports: [SocketsGateway, SocketsService],

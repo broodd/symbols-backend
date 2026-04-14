@@ -1,2 +1,2 @@
 export * from './database.module';
-export * from './seeds';
+export * from './seeds.module';

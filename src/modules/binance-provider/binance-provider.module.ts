@@ -10,7 +10,7 @@ import { BinanceProviderService } from './services';
  */
 @Global()
 @Module({
-  imports: [forwardRef(() => SymbolsModule), SocketsModule],
+  imports: [forwardRef(() => SymbolsModule), forwardRef(() => SocketsModule)],
   providers: [BinanceProviderService],
   exports: [BinanceProviderService],
 })

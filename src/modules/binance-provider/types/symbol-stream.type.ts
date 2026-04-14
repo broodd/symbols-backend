@@ -1,7 +1,12 @@
-import { SpotWebsocketStreams } from 'node_modules/@binance/spot/dist';
+import { SpotWebsocketStreams } from '@binance/spot';
 
-export type SymbolStream = ReturnType<
-  SpotWebsocketStreams.WebsocketStreamsConnection['miniTicker']
+export type MarketTickerStream = ReturnType<
+  SpotWebsocketStreams.WebsocketStreamsConnection['allMiniTicker']
 >;
 
-export type StreamTask = () => Promise<void>;
+export type MarketTickerEntry = {
+  s?: string;
+  c?: string;
+};
+
+export type MarketTickerBatch = MarketTickerEntry[];
