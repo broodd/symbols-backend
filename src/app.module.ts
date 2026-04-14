@@ -6,6 +6,7 @@ import { Module } from '@nestjs/common';
 
 import { LimitAttemptsGuard } from './modules/auth/guards';
 import { ConfigService, ConfigModule } from './config';
+import { SocketsModule } from './modules/sockets';
 import { SymbolsModule } from './modules/symbols';
 import { AppController } from './app.controller';
 import { UsersModule } from './modules/users';
@@ -30,6 +31,7 @@ import { AuthModule } from './modules/auth';
     AuthModule,
     UsersModule,
     SymbolsModule,
+    SocketsModule,
     DatabaseModule,
   ],
   controllers: [AppController],

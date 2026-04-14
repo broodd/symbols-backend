@@ -3,6 +3,7 @@
     "strictPropertyInitialization": false,
     "strictNullChecks": false,
     "noImplicitAny": false,
+    "useUnknownInCatchVariables": false,
     "module": "commonjs",
     "resolveJsonModule": true,
     "declaration": true,
