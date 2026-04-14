@@ -127,6 +127,57 @@ createApp({
       });
     },
 
+    formatRelativeTime(timestamp) {
+      if (!timestamp) return '-';
+
+      const diffSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+      if (diffSeconds < 5) return 'just now';
+      if (diffSeconds < 60) return `${diffSeconds}s ago`;
+
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+      const diffHours = Math.floor(diffMinutes / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    },
+
+    formatUpdateTime(timestamp) {
+      if (!timestamp) return '-';
+
+      return new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).format(new Date(timestamp));
+    },
+
+    subscriptionPriceClass(item) {
+      if (item?.direction === 'up') return 'text-success';
+      if (item?.direction === 'down') return 'text-danger';
+      return 'text-secondary';
+    },
+
+    subscriptionTrendClass(item) {
+      if (item?.direction === 'up') return 'trend-up';
+      if (item?.direction === 'down') return 'trend-down';
+      return 'trend-flat';
+    },
+
+    subscriptionTrendLabel(item) {
+      if (item?.direction === 'up') return 'rising';
+      if (item?.direction === 'down') return 'falling';
+      return 'stable';
+    },
+
+    subscriptionBadgeClass(item) {
+      if (item?.direction === 'up') return 'badge-success-soft';
+      if (item?.direction === 'down') return 'badge-danger-soft';
+      return 'badge-soft';
+    },
+
     setSocketStatus(label, variant) {
       const map = {
         success: 'text-bg-success',
@@ -499,10 +550,25 @@ createApp({
       patchRows(this.clientSymbols.items);
 
       if (this.subscriptionMap[update.providerSymbol]) {
+        const current = this.subscriptionMap[update.providerSymbol];
+        const previousPrice = Number(current.price);
+        const nextPrice = Number(update.price);
+        const priceDirection =
+          Number.isFinite(previousPrice) && Number.isFinite(nextPrice)
+            ? nextPrice > previousPrice
+              ? 'up'
+              : nextPrice < previousPrice
+                ? 'down'
+                : current.direction || 'stable'
+            : current.direction || 'stable';
+
         this.subscriptionMap[update.providerSymbol] = {
-          ...this.subscriptionMap[update.providerSymbol],
+          ...current,
           price: update.price,
-          name: update.name ?? this.subscriptionMap[update.providerSymbol].name,
+          name: update.name ?? current.name,
+          previousPrice: Number.isFinite(previousPrice) ? previousPrice : current.previousPrice,
+          direction: priceDirection,
+          lastUpdatedAt: Date.now(),
         };
       }
     },
@@ -638,7 +704,12 @@ createApp({
       });
 
       this.subscribedSymbols.unshift(symbol.providerSymbol);
-      this.subscriptionMap[symbol.providerSymbol] = { ...symbol };
+      this.subscriptionMap[symbol.providerSymbol] = {
+        ...symbol,
+        previousPrice: symbol.price ?? null,
+        direction: 'stable',
+        lastUpdatedAt: Date.now(),
+      };
       this.addLog(`Subscribed to ${symbol.providerSymbol}`, 'success');
       this.notify(`Subscribed to ${symbol.providerSymbol}`, 'success');
     },

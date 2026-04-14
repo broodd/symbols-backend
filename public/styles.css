@@ -149,6 +149,7 @@ body {
   --bs-table-striped-bg: rgba(15, 23, 42, 0.02);
   --bs-table-hover-bg: rgba(15, 23, 42, 0.04);
   --bs-table-color: var(--text);
+  --bs-table-hover-color: var(--text);
 }
 
 .table > :not(caption) > * > * {
@@ -158,6 +159,19 @@ body {
 .table thead th {
   color: #1e293b;
   border-bottom-color: rgba(15, 23, 42, 0.12);
+}
+
+.table-dark.table-hover > tbody > tr:hover > * {
+  color: var(--text) !important;
+  background-color: rgba(37, 99, 235, 0.06);
+}
+
+.table-dark.table-hover > tbody > tr:hover .text-secondary {
+  color: var(--muted) !important;
+}
+
+.table-dark.table-hover > tbody > tr:hover .mono {
+  color: var(--text);
 }
 
 .mono {
@@ -174,7 +188,25 @@ body {
 .subscription-grid {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1399.98px) {
+  .subscription-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 991.98px) {
+  .subscription-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .subscription-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ticker-card {
@@ -183,6 +215,29 @@ body {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
   box-shadow: var(--shadow);
   padding: 0.75rem 0.85rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.ticker-card.trend-up {
+  border-color: rgba(5, 150, 105, 0.22);
+}
+
+.ticker-card.trend-down {
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
+.ticker-card.trend-flat {
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.ticker-card.trend-up:hover,
+.ticker-card.trend-down:hover,
+.ticker-card.trend-flat:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.12);
 }
 
 .ticker-card .eyebrow {
@@ -200,6 +255,18 @@ body {
 }
 
 .ticker-card .ticker-price {
+  color: #0f172a;
+}
+
+.ticker-card.trend-up .ticker-price {
+  color: #059669;
+}
+
+.ticker-card.trend-down .ticker-price {
+  color: #dc2626;
+}
+
+.ticker-card.trend-flat .ticker-price {
   color: #0f172a;
 }
 
@@ -237,4 +304,8 @@ body {
 
 .ticker-card .mt-3 {
   margin-top: 0.5rem !important;
+}
+
+.ticker-card .small {
+  font-size: 0.77rem;
 }
