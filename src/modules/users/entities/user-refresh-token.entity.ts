@@ -14,7 +14,7 @@ export class UserRefreshTokenEntity extends CommonEntity {
   /**
    * [description]
    */
-  @Exclude()
+  @Exclude({ toPlainOnly: true })
   @ApiHideProperty()
   @Prop({ type: String, maxlength: 161, required: true })
   public ppid: string;

@@ -65,6 +65,8 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-ref
 
     if (!(await compare(ppid, refreshToken.ppid)))
       throw new BadRequestException(ErrorTypeEnum.AUTH_INCORRECT_CREDENTIALS);
+
+    user.refreshToken = refreshToken;
     return user;
   }
 }

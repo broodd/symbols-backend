@@ -109,7 +109,7 @@ export class AuthController {
     reply.clearCookie('accessToken');
     reply.clearCookie('refreshToken');
 
-    await this.userRefreshTokensService.deleteOne({ id: user.refreshToken!.id, ownerId: user.id });
+    await this.userRefreshTokensService.deleteOne({ id: user.refreshToken.id, userId: user.id });
   }
 
   /**

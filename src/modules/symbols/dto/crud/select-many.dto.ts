@@ -37,7 +37,7 @@ export class SelectSymbolsDto extends FindManyOptionsDto<SymbolEntity> {
 
     return Object.assign(
       {},
-      isPublic !== undefined && { public: isPublic },
+      isPublic !== undefined && { isPublic },
       search && {
         name: {
           $regex: search,

@@ -1,4 +1,7 @@
+import { join } from 'node:path';
+
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { CacheModule } from '@nestjs/cache-manager';
 import { TerminusModule } from '@nestjs/terminus';
 import { APP_GUARD } from '@nestjs/core';
@@ -14,9 +17,6 @@ import { UsersModule } from './modules/users';
 import { DatabaseModule } from './database';
 import { AuthModule } from './modules/auth';
 
-/**
- * [description]
- */
 @Module({
   imports: [
     TerminusModule,
@@ -35,6 +35,10 @@ import { AuthModule } from './modules/auth';
     SymbolsModule,
     SocketsModule,
     DatabaseModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '../public'),
+      serveRoot: '/public',
+    }),
   ],
   controllers: [AppController],
   providers: [LimitAttemptsGuard, { provide: APP_GUARD, useClass: ThrottlerGuard }],
