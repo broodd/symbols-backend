@@ -8,6 +8,7 @@ import {
   Body,
   Post,
   Get,
+  Put,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 
@@ -21,6 +22,7 @@ import {
   SelectUserDto,
   UpdateUserDto,
 } from '../../dto/crud';
+import { SocketsService } from 'src/modules/sockets/services';
 import { JwtAuthGuard } from 'src/modules/auth/guards';
 import { UsersService } from '../../services';
 import { UserEntity } from '../../entities';
@@ -35,11 +37,10 @@ import { UserRoleEnum } from '../../enums';
 @ApiTags('users/admin-role')
 @Controller('admin-role/users')
 export class AdminRole_UsersController {
-  /**
-   * [description]
-   * @param usersService
-   */
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly socketsService: SocketsService,
+  ) {}
 
   /**
    * [description]
@@ -86,11 +87,22 @@ export class AdminRole_UsersController {
   }
 
   /**
+   * Disconnect all active sockets of client
+   * @param conditions
+   */
+  @Put(':id/disable-socket')
+  public async disableSocket(@Param() conditions: ID): Promise<{ disconnected: number }> {
+    const disconnected = this.socketsService.disconnectMany(conditions.id);
+    return { disconnected };
+  }
+
+  /**
    * [description]
    * @param conditions
    */
   @Delete(':id')
   public async deleteOne(@Param() conditions: ID): Promise<UserEntity> {
+    this.socketsService.disconnectMany(conditions.id);
     return this.usersService.deleteOne(conditions);
   }
 }

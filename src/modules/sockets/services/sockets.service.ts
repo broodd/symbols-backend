@@ -68,4 +68,25 @@ export class SocketsService {
     sockets.delete(socketId);
     if (!sockets.size) this.usersSockets.delete(userId);
   }
+
+  /**
+   * Disconnect every socket that belongs to the given user.
+   * @param userId
+   */
+  public disconnectMany(userId: string): number {
+    const sockets = this.usersSockets.get(userId);
+    if (!sockets?.size) return 0;
+
+    const socketIds = sockets.size;
+    for (const socket of sockets.values()) {
+      try {
+        socket.disconnect(true);
+      } catch {
+        // Best effort disconnect, registry cleanup still happens below
+      }
+    }
+
+    this.usersSockets.delete(userId);
+    return socketIds;
+  }
 }
