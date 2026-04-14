@@ -4,6 +4,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { APP_GUARD } from '@nestjs/core';
 import { Module } from '@nestjs/common';
 
+import { BinanceProviderModule } from './modules/binance-provider';
 import { LimitAttemptsGuard } from './modules/auth/guards';
 import { ConfigService, ConfigModule } from './config';
 import { SocketsModule } from './modules/sockets';
@@ -30,6 +31,7 @@ import { AuthModule } from './modules/auth';
     ConfigModule,
     AuthModule,
     UsersModule,
+    BinanceProviderModule,
     SymbolsModule,
     SocketsModule,
     DatabaseModule,

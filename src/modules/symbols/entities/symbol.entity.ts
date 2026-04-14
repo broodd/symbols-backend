@@ -14,7 +14,7 @@ export class SymbolEntity extends CommonEntity {
    * Real Binance symbol, example: BTCUSDT
    */
   @ApiProperty({ maxLength: 128, nullable: false })
-  @Prop({ type: String, maxlength: 128 })
+  @Prop({ type: String, maxlength: 128, unique: true, required: true, index: true, trim: true })
   public readonly providerSymbol: string;
 
   /**

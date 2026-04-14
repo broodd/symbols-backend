@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { ConfigService } from 'src/config';
 
+import { SymbolsModule } from '../symbols';
 import { UsersModule } from '../users';
 
 import { SocketsGateway } from './services/sockets.gateway';
@@ -24,6 +25,7 @@ import { SocketsService } from './services/sockets.service';
       inject: [ConfigService],
     }),
     UsersModule,
+    SymbolsModule,
   ],
   providers: [SocketsGateway, SocketsService],
   exports: [SocketsGateway, SocketsService],

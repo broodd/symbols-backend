@@ -7,9 +7,7 @@ import { ConfigService } from './config';
 
 const TOKENS_DESCRIPTION = `
 ##### 🔐 Default Authorization Credentials
-
 - **admin@gmail.com** *Password1*
-
 - **client@gmail.com** *Password1*
 `;
 
@@ -23,7 +21,6 @@ export async function swaggerSetup(app: NestFastifyApplication, configService: C
       .setVersion(configService.get('npm_package_version'))
       .setTitle(configService.get('npm_package_name'))
       .setDescription(TOKENS_DESCRIPTION)
-      .addBearerAuth()
       .addCookieAuth(
         'accessToken',
         {

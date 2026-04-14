@@ -32,7 +32,7 @@ export class SocketsService {
   }
 
   /**
-   * [description]
+   * Select many SocketId of many Users
    * @param userIds
    */
   public selectManyIds(userIds: string[]): string[] {
@@ -40,7 +40,7 @@ export class SocketsService {
   }
 
   /**
-   * [description]
+   * Select many SocketId of one User
    * @param userId
    */
   public selectOneIds(userId: string): string[] {
@@ -48,7 +48,7 @@ export class SocketsService {
   }
 
   /**
-   * [description]
+   * Select Socket of one User
    * @param userId
    * @param socketId
    */

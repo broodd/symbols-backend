@@ -38,6 +38,7 @@
     "seed:admin:prod": "cross-env NODE_ENV=production node dist/database/seeds/cli.js seed:admin"
   },
   "dependencies": {
+    "@binance/spot": "^28.0.5",
     "@fastify/basic-auth": "^5.1.1",
     "@fastify/compress": "^7.0.3",
     "@fastify/cookie": "^7.4.0",

@@ -1,4 +1,5 @@
 import { IsOptional, IsBoolean, MaxLength, IsNumber } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -19,7 +20,8 @@ export class CreateSymbolDto {
    */
   @IsOptional()
   @MaxLength(128)
-  @ApiProperty({ maxLength: 128, required: false })
+  @Transform(({ value }) => value.trim().toUpperCase())
+  @ApiProperty({ maxLength: 128, required: false, example: 'BTCUSDT' })
   public readonly providerSymbol: string;
 
   /**
@@ -28,7 +30,7 @@ export class CreateSymbolDto {
   @IsOptional()
   @IsBoolean()
   @ApiProperty()
-  public readonly public: boolean;
+  public readonly isPublic: boolean;
 
   /**
    * [description]

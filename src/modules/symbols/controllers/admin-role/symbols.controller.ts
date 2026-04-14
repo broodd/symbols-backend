@@ -1,7 +1,9 @@
 import {
   Controller,
+  forwardRef,
   UseGuards,
   Delete,
+  Inject,
   Param,
   Patch,
   Query,
@@ -21,6 +23,7 @@ import {
   SelectSymbolDto,
   UpdateSymbolDto,
 } from '../../dto/crud';
+import { BinanceProviderService } from 'src/modules/binance-provider';
 import { JwtAuthGuard } from 'src/modules/auth/guards';
 import { UserRoleEnum } from 'src/modules/users/enums';
 import { SymbolsService } from '../../services';
@@ -39,7 +42,11 @@ export class AdminRole_SymbolsController {
    * [description]
    * @param symbolsService
    */
-  constructor(private readonly symbolsService: SymbolsService) {}
+  constructor(
+    private readonly symbolsService: SymbolsService,
+    @Inject(forwardRef(() => BinanceProviderService))
+    private readonly binanceProviderService: BinanceProviderService,
+  ) {}
 
   /**
    * [description]
@@ -47,7 +54,9 @@ export class AdminRole_SymbolsController {
    */
   @Post()
   public async createOne(@Body() data: CreateSymbolDto): Promise<SymbolEntity> {
-    return this.symbolsService.createOne(data);
+    const symbol = await this.symbolsService.createOne(data);
+    await this.binanceProviderService.registerSymbol(symbol);
+    return symbol;
   }
 
   /**
@@ -84,7 +93,10 @@ export class AdminRole_SymbolsController {
     @Param() conditions: ID,
     @Body() data: UpdateSymbolDto,
   ): Promise<SymbolEntity> {
-    return this.symbolsService.updateOne(conditions, data);
+    const current = await this.symbolsService.selectOne(conditions);
+    const symbol = await this.symbolsService.updateOne(conditions, data);
+    await this.binanceProviderService.syncSymbol(current, symbol);
+    return symbol;
   }
 
   /**
@@ -93,6 +105,8 @@ export class AdminRole_SymbolsController {
    */
   @Delete(':id')
   public async deleteOne(@Param() conditions: ID): Promise<SymbolEntity> {
-    return this.symbolsService.deleteOne(conditions);
+    const symbol = await this.symbolsService.deleteOne(conditions);
+    await this.binanceProviderService.unregisterSymbol(symbol);
+    return symbol;
   }
 }
