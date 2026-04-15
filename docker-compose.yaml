@@ -1,23 +1,23 @@
 services:
-  # api:
-  #   container_name: symbols-backend
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - '8080:8080'
-  #   depends_on:
-  #     - mongodb
-  #   networks:
-  #     - network
-  #   env_file:
-  #     - .env.production
-  #   secrets:
-  #     - mongodb-uri
-  #     - swagger-username
-  #     - swagger-password
-  #     - jwt-secret-access-token
-  #     - jwt-secret-refresh-token
+  api:
+    container_name: symbols-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mongodb
+    networks:
+      - network
+    env_file:
+      - .env.production
+    secrets:
+      - mongodb-uri
+      - swagger-username
+      - swagger-password
+      - jwt-secret-access-token
+      - jwt-secret-refresh-token
 
   mongodb:
     image: mongo:7

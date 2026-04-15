@@ -13,6 +13,9 @@
     "npm": ">=10.x"
   },
   "scripts": {
+    "seed:secrets": "mkdir -p .secrets && cp -r .secrets.example/* .secrets/",
+    "infra:up": "docker-compose up -d",
+    "infra:down": "docker-compose down",
     "prebuild": "rimraf dist",
     "build": "nest build",
     "mjml:build": "ts-node src/sendmail/compile-mjml.ts",
